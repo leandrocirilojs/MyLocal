@@ -1,4 +1,4 @@
-/* ───────────Atualizado2301──────────────────────────────────
+/* ─────────────────────────────────────────────
    GeoTrack — app.js
    Multi-usuário + Login Google + Painel Admin
 ───────────────────────────────────────────── */
@@ -36,35 +36,18 @@ function loginGoogle() {
   const el = document.getElementById('loginError');
   el.style.display = 'none';
 
-  if (!auth) {
-    el.textContent = 'Firebase Auth não inicializado. Verifique o config.js.';
-    el.style.display = 'block';
-    return;
-  }
-
   const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
 
-  // Tenta redirect (mobile). Se falhar, tenta popup (desktop)
-  auth.signInWithRedirect(provider).catch(err => {
-    // redirect falhou, tenta popup
-    auth.signInWithPopup(provider).catch(err2 => {
-      el.textContent = 'Erro: ' + err2.message;
+  auth.signInWithPopup(provider)
+    .then(() => {
+      // sucesso — onAuthStateChanged cuida do resto
+    })
+    .catch(err => {
+      el.textContent = 'Erro: ' + err.message;
       el.style.display = 'block';
     });
-  });
 }
-
-// Captura resultado do redirect ao voltar para a página
-auth.getRedirectResult().then(result => {
-  if (result && result.user) {
-    // login via redirect funcionou — onAuthStateChanged cuida do resto
-  }
-}).catch(err => {
-  if (err.code && err.code !== 'auth/no-current-user') {
-    const el = document.getElementById('loginError');
-    if (el) { el.textContent = 'Erro no redirect: ' + err.message; el.style.display = 'block'; }
-  }
-});
 
 // ─── Logout
 function logout() {
@@ -307,4 +290,4 @@ function setConnected(connected) {
   const text = document.getElementById('statusText');
   pill.classList.toggle('connected', connected);
   text.textContent = connected ? 'Firebase OK' : 'Desconectado';
-     }
+}
