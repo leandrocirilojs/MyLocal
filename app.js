@@ -25,8 +25,19 @@ const DEVICE_ID = (() => {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('deviceIdDisplay').textContent = DEVICE_ID;
   document.getElementById('deviceName').textContent = navigator.userAgent.includes('Mobile') ? 'Celular' : 'Este dispositivo';
-  loadConfig();
   setupNav();
+
+  // Inicializa direto pelo config.js se as credenciais foram preenchidas
+  if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.apiKey !== 'COLE_AQUI') {
+    initFirebase(FIREBASE_CONFIG);
+    document.getElementById('cfgApiKey').value      = FIREBASE_CONFIG.apiKey      || '';
+    document.getElementById('cfgAuthDomain').value  = FIREBASE_CONFIG.authDomain  || '';
+    document.getElementById('cfgDatabaseURL').value = FIREBASE_CONFIG.databaseURL || '';
+    document.getElementById('cfgProjectId').value   = FIREBASE_CONFIG.projectId   || '';
+    document.getElementById('cfgAppId').value       = FIREBASE_CONFIG.appId       || '';
+  } else {
+    loadConfig();
+  }
 });
 
 // ── Navegação por abas
@@ -328,4 +339,4 @@ function copyRules() {
     btn.textContent = 'Copiado!';
     setTimeout(() => btn.textContent = 'Copiar', 2000);
   });
-}
+     }
