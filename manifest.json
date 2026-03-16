@@ -1,0 +1,32 @@
+{
+  "name": "GeoTrack — Rastreador Anti-Furto",
+  "short_name": "GeoTrack",
+  "description": "Rastreie seu celular em tempo real",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0d0f",
+  "theme_color": "#0a0d0f",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "navigation"],
+  "shortcuts": [
+    {
+      "name": "Iniciar Rastreamento",
+      "url": "./?action=track",
+      "description": "Inicia o rastreamento imediatamente"
+    }
+  ]
+}
