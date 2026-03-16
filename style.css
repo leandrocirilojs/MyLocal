@@ -312,6 +312,12 @@ h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.8px; color: var(--tex
 }
 .nav-logout-mobile:hover { background: var(--red-dim); }
 
+/* Desktop: esconde o botão mobile, mostra sidebar-bottom */
+@media (min-width: 1025px) {
+  .nav-logout-mobile { display: none !important; }
+  .sidebar-bottom { display: flex; }
+}
+
 @media (max-width: 1024px) {
   .app { flex-direction: column; height: auto; min-height: 100vh; }
   .sidebar {
@@ -330,7 +336,8 @@ h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.8px; color: var(--tex
   .logo { margin-bottom: 0; margin-right: 12px; flex-shrink: 0; }
   .nav { flex-direction: row; gap: 4px; flex: 1; }
   .nav-item { white-space: nowrap; font-size: 12px; padding: 7px 10px; }
-  .nav-logout-mobile { display: flex; }
+  .nav-logout-mobile { display: flex !important; }
+  .sidebar-bottom { display: none !important; }
   .sidebar-bottom { display: none; }
   .main { padding: 16px; flex: 1; overflow-y: auto; }
   .metrics { grid-template-columns: repeat(2, 1fr); }
