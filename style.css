@@ -17,7 +17,7 @@
   --font-mono: 'DM Mono', monospace;
   --radius: 12px;
   --radius-sm: 8px;
-  --sidebar-w: 210px;
+  --sidebar-w: 180px;
 }
 
 html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-display); }
@@ -291,15 +291,70 @@ h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.8px; color: var(--tex
 ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
 
 /* ── RESPONSIVE ── */
-@media (max-width: 768px) {
-  .app { flex-direction: column; }
-  .sidebar { width: 100%; flex-direction: row; padding: 10px 14px; align-items: center; border-right: none; border-bottom: 1px solid var(--border); overflow-x: auto; }
+
+/* ── BOTÃO SAIR MOBILE ── */
+.nav-logout-mobile {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: none;
+  border: 1px solid rgba(255,77,77,0.3);
+  border-radius: var(--radius-sm);
+  color: var(--red);
+  font-family: var(--font-display);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
+  transition: background 0.15s;
+}
+.nav-logout-mobile:hover { background: var(--red-dim); }
+
+@media (max-width: 1024px) {
+  .app { flex-direction: column; height: auto; min-height: 100vh; }
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    padding: 10px 14px;
+    align-items: center;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
   .logo { margin-bottom: 0; margin-right: 12px; flex-shrink: 0; }
-  .nav { flex-direction: row; gap: 4px; }
-  .nav-item { white-space: nowrap; }
+  .nav { flex-direction: row; gap: 4px; flex: 1; }
+  .nav-item { white-space: nowrap; font-size: 12px; padding: 7px 10px; }
+  .nav-logout-mobile { display: flex; }
   .sidebar-bottom { display: none; }
-  .main { padding: 16px; }
+  .main { padding: 16px; flex: 1; overflow-y: auto; }
   .metrics { grid-template-columns: repeat(2, 1fr); }
   h1 { font-size: 20px; }
   .users-grid { grid-template-columns: 1fr; }
+  #mapFrame { height: 240px; }
+}
+
+@media (max-width: 480px) {
+  :root { --sidebar-w: 56px; }
+  .logo span { display: none; }
+  .nav-item span,
+  .nav-item { 
+    font-size: 0;
+    padding: 10px;
+    justify-content: center;
+  }
+  .nav-item svg { width: 18px; height: 18px; }
+  .nav-logout-mobile span { display: none; }
+  .nav-logout-mobile { padding: 10px; justify-content: center; margin-left: 0; }
+  .sidebar-bottom { padding-top: 8px; gap: 6px; }
+  .user-info { display: none; }
+  .btn-logout { font-size: 0; padding: 8px; text-align: center; }
+  .btn-logout::after { content: "↪"; font-size: 14px; }
+  .status-pill { padding: 6px 8px; }
+  #statusText { display: none; }
 }
