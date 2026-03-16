@@ -11,6 +11,7 @@ let isTracking = false;
 let updateCount = 0;
 let locationHistory = [];
 let usersListener = null;
+let lastSavedPos = null;
 
 // ─── Cole o seu email aqui para ter acesso de admin
 const ADMIN_EMAIL = FIREBASE_CONFIG.adminEmail || '';
@@ -122,9 +123,10 @@ function toggleTracking() {
 function startTracking() {
   if (!navigator.geolocation) { alert('GPS não disponível neste navegador.'); return; }
   isTracking = true;
+  lastSavedPos = null;
   updateBtnState();
   watchId = navigator.geolocation.watchPosition(onPosition, onPositionError, {
-    enableHighAccuracy: true, maximumAge: 5000, timeout: 15000,
+    enableHighAccuracy: true, maximumAge: 30000, timeout: 30000,
   });
 }
 
@@ -135,19 +137,42 @@ function stopTracking() {
   updateBtnState();
 }
 
+// Calcula distância em metros entre dois pontos (Haversine)
+function calcDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function onPosition(pos) {
   const { latitude: lat, longitude: lng, accuracy } = pos.coords;
-  updateCount++;
 
-  document.getElementById('metLat').textContent   = lat.toFixed(6);
-  document.getElementById('metLng').textContent   = lng.toFixed(6);
-  document.getElementById('metAcc').textContent   = accuracy.toFixed(1) + 'm';
+  // Atualiza UI sempre
+  document.getElementById('metLat').textContent = lat.toFixed(6);
+  document.getElementById('metLng').textContent = lng.toFixed(6);
+  document.getElementById('metAcc').textContent = accuracy.toFixed(1) + 'm';
+  updateMap(lat, lng);
+
+  // Só salva no Firebase se moveu 50+ metros
+  if (lastSavedPos) {
+    const dist = calcDistance(lastSavedPos.lat, lastSavedPos.lng, lat, lng);
+    if (dist < 50) {
+      document.getElementById('lastUpdate').textContent = 'Aguardando mover 50m… (atual: ' + Math.round(dist) + 'm)';
+      return;
+    }
+  }
+
+  updateCount++;
+  lastSavedPos = { lat, lng };
   document.getElementById('metCount').textContent = updateCount;
 
   const now = new Date().toLocaleString('pt-BR');
-  document.getElementById('lastUpdate').textContent = 'Última atualização: ' + now;
+  document.getElementById('lastUpdate').textContent = 'Salvo no Firebase: ' + now;
 
-  updateMap(lat, lng);
   saveLocation(lat, lng, accuracy, now);
   addToHistory(lat, lng, accuracy, now);
 }
@@ -290,4 +315,4 @@ function setConnected(connected) {
   const text = document.getElementById('statusText');
   pill.classList.toggle('connected', connected);
   text.textContent = connected ? 'Firebase OK' : 'Desconectado';
-}
+     }
