@@ -3,7 +3,7 @@
    Rastreamento em segundo plano
 ═══════════════════════════════════════════ */
 
-const CACHE_NAME = 'geotrack-v1';
+const CACHE_NAME = 'geotrack-v2';
 const ASSETS = [
   './',
   './index.html',
