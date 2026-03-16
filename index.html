@@ -57,6 +57,10 @@
         <span>Histórico</span>
       </button>
     </nav>
+    <button class="nav-logout-mobile" onclick="logout()" title="Sair">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M10 11l3-3-3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><line x1="13" y1="8" x2="6" y2="8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <span>Sair</span>
+    </button>
     <div class="sidebar-bottom">
       <button class="btn-primary" id="btnInstall" onclick="installPWA()" style="display:none; font-size:12px; padding:8px 12px; margin-bottom:6px">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M2 10v2h10v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -214,7 +218,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
-  <script>
+<script>
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCl4f1jEq-kM-XIGtGl_VOnGsGezFN85jY",
   authDomain: "mylocal-578a0.firebaseapp.com",
@@ -225,7 +229,7 @@ const FIREBASE_CONFIG = {
   appId: "1:536709482770:web:6ff8ee22d4f48b0a7b4bcb",
   adminEmail: "fleandrocirilopeixoto@gmail.com"
 };
-  </script>
+</script>
 <script src="app.js"></script>
 </body>
 </html>
