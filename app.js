@@ -1,46 +1,99 @@
 /* ─────────────────────────────────────────────
    GeoTrack — app.js
-   Rastreador de localização com Firebase
+   Multi-usuário + Login Google + Painel Admin
 ───────────────────────────────────────────── */
 
-// ── Estado global
-let firebaseApp = null;
 let db = null;
+let auth = null;
+let currentUser = null;
 let watchId = null;
 let isTracking = false;
 let updateCount = 0;
 let locationHistory = [];
+let usersListener = null;
 
-// ── ID único do dispositivo
-const DEVICE_ID = (() => {
-  let id = localStorage.getItem('geotrack_device_id');
-  if (!id) {
-    id = 'device_' + Math.random().toString(36).substring(2, 10);
-    localStorage.setItem('geotrack_device_id', id);
-  }
-  return id;
-})();
+// ─── Cole o seu email aqui para ter acesso de admin
+const ADMIN_EMAIL = FIREBASE_CONFIG.adminEmail || '';
 
-// ── Inicialização
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('deviceIdDisplay').textContent = DEVICE_ID;
-  document.getElementById('deviceName').textContent = navigator.userAgent.includes('Mobile') ? 'Celular' : 'Este dispositivo';
-  setupNav();
+// ─── Init Firebase
+firebase.initializeApp(FIREBASE_CONFIG);
+db   = firebase.database();
+auth = firebase.auth();
 
-  // Inicializa direto pelo config.js se as credenciais foram preenchidas
-  if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.apiKey !== 'COLE_AQUI') {
-    initFirebase(FIREBASE_CONFIG);
-    document.getElementById('cfgApiKey').value      = FIREBASE_CONFIG.apiKey      || '';
-    document.getElementById('cfgAuthDomain').value  = FIREBASE_CONFIG.authDomain  || '';
-    document.getElementById('cfgDatabaseURL').value = FIREBASE_CONFIG.databaseURL || '';
-    document.getElementById('cfgProjectId').value   = FIREBASE_CONFIG.projectId   || '';
-    document.getElementById('cfgAppId').value       = FIREBASE_CONFIG.appId       || '';
+// ─── Observa estado de autenticação
+auth.onAuthStateChanged(user => {
+  if (user) {
+    currentUser = user;
+    showApp(user);
   } else {
-    loadConfig();
+    currentUser = null;
+    showLogin();
   }
 });
 
-// ── Navegação por abas
+// ─── Login Google
+function loginGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => {
+    const el = document.getElementById('loginError');
+    el.textContent = 'Erro ao entrar: ' + err.message;
+    el.style.display = 'block';
+  });
+}
+
+// ─── Logout
+function logout() {
+  stopTracking();
+  if (currentUser) {
+    db.ref('users/' + currentUser.uid + '/online').set(false);
+  }
+  auth.signOut();
+}
+
+// ─── Mostra tela de login
+function showLogin() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appScreen').style.display   = 'none';
+}
+
+// ─── Mostra app após login
+function showApp(user) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display   = 'flex';
+
+  // Foto e nome
+  const avatar = document.getElementById('userAvatar');
+  if (user.photoURL) { avatar.src = user.photoURL; avatar.style.display = 'block'; }
+  document.getElementById('userName').textContent  = user.displayName || 'Usuário';
+  document.getElementById('userEmail').textContent = user.email || '';
+
+  // Salva perfil no Firebase
+  db.ref('users/' + user.uid).update({
+    name:   user.displayName || 'Usuário',
+    email:  user.email || '',
+    photo:  user.photoURL || '',
+    online: true,
+    lastSeen: Date.now(),
+  });
+
+  // Marca offline ao fechar
+  db.ref('users/' + user.uid + '/online').onDisconnect().set(false);
+
+  // Admin?
+  const isAdmin = user.email === ADMIN_EMAIL;
+  document.getElementById('adminTab').style.display = isAdmin ? 'flex' : 'none';
+  if (isAdmin) listenAllUsers();
+
+  monitorConnection();
+  setupNav();
+}
+
+// ─── Monitora conexão Firebase
+function monitorConnection() {
+  db.ref('.info/connected').on('value', snap => setConnected(snap.val() === true));
+}
+
+// ─── Navegação
 function setupNav() {
   document.querySelectorAll('.nav-item').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -53,200 +106,135 @@ function setupNav() {
   });
 }
 
-// ── Firebase: carregar config salva
-function loadConfig() {
-  const saved = localStorage.getItem('geotrack_firebase_config');
-  if (!saved) return;
-  try {
-    const cfg = JSON.parse(saved);
-    document.getElementById('cfgApiKey').value     = cfg.apiKey     || '';
-    document.getElementById('cfgAuthDomain').value = cfg.authDomain || '';
-    document.getElementById('cfgDatabaseURL').value = cfg.databaseURL || '';
-    document.getElementById('cfgProjectId').value  = cfg.projectId  || '';
-    document.getElementById('cfgAppId').value      = cfg.appId      || '';
-    initFirebase(cfg);
-  } catch (e) {
-    console.warn('Config inválida:', e);
-  }
-}
-
-// ── Firebase: salvar config
-function saveConfig() {
-  const cfg = {
-    apiKey:      document.getElementById('cfgApiKey').value.trim(),
-    authDomain:  document.getElementById('cfgAuthDomain').value.trim(),
-    databaseURL: document.getElementById('cfgDatabaseURL').value.trim(),
-    projectId:   document.getElementById('cfgProjectId').value.trim(),
-    appId:       document.getElementById('cfgAppId').value.trim(),
-  };
-
-  if (!cfg.apiKey || !cfg.databaseURL) {
-    showConfigMsg('Preencha ao menos a API Key e a Database URL.', 'error');
-    return;
-  }
-
-  localStorage.setItem('geotrack_firebase_config', JSON.stringify(cfg));
-  initFirebase(cfg);
-  showConfigMsg('Configuração salva! Firebase inicializado.', 'success');
-}
-
-// ── Firebase: inicializar
-function initFirebase(cfg) {
-  try {
-    if (firebaseApp) {
-      firebase.app().delete();
-    }
-    firebaseApp = firebase.initializeApp(cfg);
-    db = firebase.database();
-    setConnected(true);
-    monitorConnection();
-  } catch (e) {
-    console.error('Erro ao inicializar Firebase:', e);
-    setConnected(false);
-    showConfigMsg('Erro: ' + e.message, 'error');
-  }
-}
-
-// ── Firebase: monitorar conexão em tempo real
-function monitorConnection() {
-  if (!db) return;
-  const connRef = db.ref('.info/connected');
-  connRef.on('value', snap => setConnected(snap.val() === true));
-}
-
-// ── Firebase: testar conexão
-function testConnection() {
-  if (!db) {
-    showConfigMsg('Configure o Firebase primeiro.', 'error');
-    return;
-  }
-  db.ref('.info/connected').once('value')
-    .then(snap => {
-      if (snap.val()) {
-        showConfigMsg('Conexão bem-sucedida!', 'success');
-      } else {
-        showConfigMsg('Firebase inicializado, mas sem conexão ativa.', 'error');
-      }
-    })
-    .catch(e => showConfigMsg('Falha: ' + e.message, 'error'));
-}
-
-// ── Firebase: salvar localização
-function saveLocation(lat, lng, accuracy) {
-  if (!db) return;
-
-  const data = {
-    lat,
-    lng,
-    accuracy: parseFloat(accuracy.toFixed(2)),
-    timestamp: Date.now(),
-    deviceId: DEVICE_ID,
-  };
-
-  // Posição atual (sobrescreve)
-  db.ref('locations/' + DEVICE_ID + '/current').set(data)
-    .catch(e => console.error('Erro ao salvar posição atual:', e));
-
-  // Histórico (acumula)
-  db.ref('locations/' + DEVICE_ID + '/history').push(data)
-    .catch(e => console.error('Erro ao salvar histórico:', e));
-}
-
-// ── Rastreamento: iniciar/parar
+// ─── Rastreamento
 function toggleTracking() {
-  if (isTracking) {
-    stopTracking();
-  } else {
-    startTracking();
-  }
+  isTracking ? stopTracking() : startTracking();
 }
 
 function startTracking() {
-  if (!navigator.geolocation) {
-    alert('Geolocalização não suportada neste navegador.');
-    return;
-  }
-
+  if (!navigator.geolocation) { alert('GPS não disponível neste navegador.'); return; }
   isTracking = true;
   updateBtnState();
-
-  watchId = navigator.geolocation.watchPosition(
-    onPosition,
-    onPositionError,
-    {
-      enableHighAccuracy: true,
-      maximumAge: 5000,
-      timeout: 15000,
-    }
-  );
+  watchId = navigator.geolocation.watchPosition(onPosition, onPositionError, {
+    enableHighAccuracy: true, maximumAge: 5000, timeout: 15000,
+  });
 }
 
 function stopTracking() {
   isTracking = false;
-  if (watchId !== null) {
-    navigator.geolocation.clearWatch(watchId);
-    watchId = null;
-  }
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  if (currentUser) db.ref('users/' + currentUser.uid + '/tracking').set(false);
   updateBtnState();
 }
 
-// ── Callback: posição recebida
-function onPosition(position) {
-  const { latitude, longitude, accuracy } = position.coords;
+function onPosition(pos) {
+  const { latitude: lat, longitude: lng, accuracy } = pos.coords;
   updateCount++;
 
-  // UI métricas
-  document.getElementById('metLat').textContent   = latitude.toFixed(6);
-  document.getElementById('metLng').textContent   = longitude.toFixed(6);
+  document.getElementById('metLat').textContent   = lat.toFixed(6);
+  document.getElementById('metLng').textContent   = lng.toFixed(6);
   document.getElementById('metAcc').textContent   = accuracy.toFixed(1) + 'm';
   document.getElementById('metCount').textContent = updateCount;
 
-  // Última atualização
   const now = new Date().toLocaleString('pt-BR');
   document.getElementById('lastUpdate').textContent = 'Última atualização: ' + now;
 
-  // Mapa (OpenStreetMap via iframe embed)
-  updateMap(latitude, longitude);
-
-  // Firebase
-  saveLocation(latitude, longitude, accuracy);
-
-  // Histórico local
-  addToHistory(latitude, longitude, accuracy, now);
+  updateMap(lat, lng);
+  saveLocation(lat, lng, accuracy, now);
+  addToHistory(lat, lng, accuracy, now);
 }
 
 function onPositionError(err) {
-  console.warn('Erro de geolocalização:', err.message);
-  document.getElementById('lastUpdate').textContent = 'Erro: ' + err.message;
+  document.getElementById('lastUpdate').textContent = 'Erro GPS: ' + err.message;
 }
 
-// ── Mapa: atualizar iframe (OpenStreetMap)
-function updateMap(lat, lng) {
-  const placeholder = document.getElementById('mapPlaceholder');
-  const iframe = document.getElementById('mapIframe');
-  const mapLink = document.getElementById('mapLink');
-
-  const zoom = 16;
-  const url = `https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.005},${lat-0.005},${lng+0.005},${lat+0.005}&layer=mapnik&marker=${lat},${lng}`;
-
-  placeholder.style.display = 'none';
-  iframe.style.display = 'block';
-  iframe.src = url;
-
-  mapLink.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=${zoom}/${lat}/${lng}`;
-  mapLink.style.display = 'inline';
-}
-
-// ── Histórico local
-function addToHistory(lat, lng, accuracy, time) {
-  const entry = {
-    index: updateCount,
-    lat: lat.toFixed(6),
-    lng: lng.toFixed(6),
-    acc: accuracy.toFixed(1),
-    time,
+// ─── Salva no Firebase
+function saveLocation(lat, lng, accuracy, timeStr) {
+  if (!currentUser || !db) return;
+  const uid = currentUser.uid;
+  const data = {
+    lat, lng,
+    accuracy: parseFloat(accuracy.toFixed(2)),
+    timestamp: Date.now(),
+    time: timeStr,
+    name:  currentUser.displayName || 'Usuário',
+    email: currentUser.email || '',
+    photo: currentUser.photoURL || '',
+    tracking: true,
   };
-  locationHistory.unshift(entry);
+  // Posição atual do usuário
+  db.ref('users/' + uid + '/current').set(data);
+  // Histórico do usuário
+  db.ref('users/' + uid + '/history').push(data);
+}
+
+// ─── Mapa
+function updateMap(lat, lng) {
+  document.getElementById('mapPlaceholder').style.display = 'none';
+  const iframe = document.getElementById('mapIframe');
+  iframe.style.display = 'block';
+  iframe.src = `https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.005},${lat-0.005},${lng+0.005},${lat+0.005}&layer=mapnik&marker=${lat},${lng}`;
+  const ml = document.getElementById('mapLink');
+  ml.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`;
+  ml.style.display = 'inline';
+}
+
+// ─── Admin: escuta todos os usuários
+function listenAllUsers() {
+  if (usersListener) return;
+  usersListener = db.ref('users').on('value', snap => {
+    const data = snap.val() || {};
+    renderUsersGrid(data);
+  });
+}
+
+function renderUsersGrid(data) {
+  const grid = document.getElementById('usersGrid');
+  const users = Object.entries(data);
+  const active = users.filter(([, u]) => u.current && u.tracking);
+
+  document.getElementById('onlineCount').textContent = active.length;
+
+  if (!users.length) {
+    grid.innerHTML = '<p class="empty-msg">Nenhum usuário cadastrado ainda</p>';
+    return;
+  }
+
+  grid.innerHTML = users.map(([uid, u]) => {
+    const cur = u.current;
+    const hasLoc = cur && cur.lat;
+    const isOnline = u.online && u.tracking;
+    const initials = (u.name || 'U').split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
+    const mapsUrl = hasLoc ? `https://www.openstreetmap.org/?mlat=${cur.lat}&mlon=${cur.lng}#map=16/${cur.lat}/${cur.lng}` : '#';
+
+    return `
+      <div class="user-card ${isOnline ? 'user-online' : ''}">
+        <div class="user-card-top">
+          ${u.photo
+            ? `<img src="${u.photo}" class="user-avatar" alt="" />`
+            : `<div class="user-avatar-initials">${initials}</div>`
+          }
+          <div class="user-card-info">
+            <span class="user-card-name">${u.name || 'Usuário'}</span>
+            <span class="user-card-email">${u.email || ''}</span>
+          </div>
+          <span class="user-badge ${isOnline ? 'badge-on' : 'badge-off'}">${isOnline ? 'Ativo' : 'Offline'}</span>
+        </div>
+        ${hasLoc ? `
+          <div class="user-card-coords">
+            <span class="mono">${parseFloat(cur.lat).toFixed(5)}, ${parseFloat(cur.lng).toFixed(5)}</span>
+            <span class="user-card-time">${cur.time || ''}</span>
+          </div>
+          <a href="${mapsUrl}" target="_blank" class="user-card-map">Ver no mapa ↗</a>
+        ` : `<p class="user-card-noloc">Sem localização ainda</p>`}
+      </div>
+    `;
+  }).join('');
+}
+
+// ─── Histórico local
+function addToHistory(lat, lng, accuracy, time) {
+  locationHistory.unshift({ index: updateCount, lat: lat.toFixed(6), lng: lng.toFixed(6), acc: accuracy.toFixed(1), time });
   if (locationHistory.length > 100) locationHistory.pop();
   renderHistory();
 }
@@ -257,18 +245,12 @@ function renderHistory() {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Nenhum registro ainda</td></tr>';
     return;
   }
-  tbody.innerHTML = locationHistory.map(entry => `
+  tbody.innerHTML = locationHistory.map(e => `
     <tr>
-      <td>${entry.index}</td>
-      <td>${entry.lat}</td>
-      <td>${entry.lng}</td>
-      <td>${entry.acc}m</td>
-      <td>${entry.time}</td>
-      <td>
-        <button class="map-btn" onclick="openMapRow('${entry.lat}','${entry.lng}')">Ver mapa</button>
-      </td>
-    </tr>
-  `).join('');
+      <td>${e.index}</td><td>${e.lat}</td><td>${e.lng}</td>
+      <td>${e.acc}m</td><td>${e.time}</td>
+      <td><button class="map-btn" onclick="openMapRow('${e.lat}','${e.lng}')">Ver mapa</button></td>
+    </tr>`).join('');
 }
 
 function openMapRow(lat, lng) {
@@ -280,34 +262,17 @@ function clearHistory() {
   updateCount = 0;
   document.getElementById('metCount').textContent = '0';
   renderHistory();
-
-  // Remove histórico do Firebase também
-  if (db) {
-    db.ref('locations/' + DEVICE_ID + '/history').remove()
-      .catch(e => console.error('Erro ao limpar Firebase:', e));
-  }
+  if (currentUser && db) db.ref('users/' + currentUser.uid + '/history').remove();
 }
 
-// ── UI helpers
+// ─── UI helpers
 function updateBtnState() {
   const btn = document.getElementById('btnTrack');
   if (isTracking) {
-    btn.innerHTML = `
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-        <rect x="2" y="2" width="4" height="10" rx="1" fill="currentColor"/>
-        <rect x="8" y="2" width="4" height="10" rx="1" fill="currentColor"/>
-      </svg>
-      Parar Rastreamento
-    `;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="2" y="2" width="4" height="10" rx="1" fill="currentColor"/><rect x="8" y="2" width="4" height="10" rx="1" fill="currentColor"/></svg> Parar Rastreamento`;
     btn.classList.add('danger');
   } else {
-    btn.innerHTML = `
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-        <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5"/>
-        <circle cx="7" cy="7" r="2.5" fill="currentColor"/>
-      </svg>
-      Iniciar Rastreamento
-    `;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="7" r="2.5" fill="currentColor"/></svg> Iniciar Rastreamento`;
     btn.classList.remove('danger');
   }
 }
@@ -315,28 +280,6 @@ function updateBtnState() {
 function setConnected(connected) {
   const pill = document.getElementById('connectionStatus');
   const text = document.getElementById('statusText');
-  if (connected) {
-    pill.classList.add('connected');
-    text.textContent = 'Firebase OK';
-  } else {
-    pill.classList.remove('connected');
-    text.textContent = 'Desconectado';
-  }
+  pill.classList.toggle('connected', connected);
+  text.textContent = connected ? 'Firebase OK' : 'Desconectado';
 }
-
-function showConfigMsg(msg, type) {
-  const el = document.getElementById('configMsg');
-  el.textContent = msg;
-  el.className = 'config-msg ' + type;
-  el.style.display = 'block';
-  setTimeout(() => { el.style.display = 'none'; }, 4000);
-}
-
-function copyRules() {
-  const text = document.getElementById('rulesCode').textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.querySelector('.copy-btn');
-    btn.textContent = 'Copiado!';
-    setTimeout(() => btn.textContent = 'Copiar', 2000);
-  });
-     }
