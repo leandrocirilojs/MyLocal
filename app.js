@@ -307,4 +307,4 @@ function setConnected(connected) {
   const text = document.getElementById('statusText');
   pill.classList.toggle('connected', connected);
   text.textContent = connected ? 'Firebase OK' : 'Desconectado';
-}
+     }
