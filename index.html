@@ -52,17 +52,22 @@
       <nav class="nav">
         <button class="nav-item active" data-tab="dashboard">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.4"/></svg>
-          Meu Rastreio
+          <span>Meu Rastreio</span>
         </button>
         <button class="nav-item" data-tab="admin" id="adminTab" style="display:none">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.4"/><path d="M2 14c0-3.314 2.686-5 6-5s6 1.686 6 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-          Todos os Usuários
+          <span>Todos os Usuários</span>
         </button>
         <button class="nav-item" data-tab="history">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/><path d="M8 4.5V8l2.5 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-          Histórico
+          <span>Histórico</span>
         </button>
       </nav>
+
+      <button class="nav-logout-mobile" onclick="logout()" title="Sair">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M10 11l3-3-3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><line x1="13" y1="8" x2="6" y2="8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span>Sair</span>
+      </button>
 
       <div class="sidebar-bottom">
         <div class="user-info" id="userInfo">
@@ -147,20 +152,6 @@
     </main>
   </div>
 
-
-<script>
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCl4f1jEq-kM-XIGtGl_VOnGsGezFN85jY",
-  authDomain: "mylocal-578a0.firebaseapp.com",
-  databaseURL: "https://mylocal-578a0-default-rtdb.firebaseio.com",
-  projectId: "mylocal-578a0",
-  storageBucket: "mylocal-578a0.firebasestorage.app",
-  messagingSenderId: "536709482770",
-  appId: "1:536709482770:web:6ff8ee22d4f48b0a7b4bcb",
-  adminEmail: "fleandrocirilopeixoto@gmail.com"
-};
-</script>
-  
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
