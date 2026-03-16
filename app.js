@@ -34,12 +34,20 @@ auth.onAuthStateChanged(user => {
 // ─── Login Google
 function loginGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(err => {
+  auth.signInWithRedirect(provider).catch(err => {
     const el = document.getElementById('loginError');
     el.textContent = 'Erro ao entrar: ' + err.message;
     el.style.display = 'block';
   });
 }
+
+// Captura o resultado do redirect ao voltar para a página
+auth.getRedirectResult().catch(err => {
+  if (err.code !== 'auth/no-current-user') {
+    const el = document.getElementById('loginError');
+    if (el) { el.textContent = 'Erro: ' + err.message; el.style.display = 'block'; }
+  }
+});
 
 // ─── Logout
 function logout() {
