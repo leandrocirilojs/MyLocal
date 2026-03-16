@@ -291,28 +291,15 @@ h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.8px; color: var(--tex
 ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
 
 /* ── RESPONSIVE ── */
-@media (max-width: 1024px) {
-  .app { flex-direction: column; height: auto; min-height: 100vh; }
-  .sidebar {
-    width: 100%;
-    flex-direction: row;
-    padding: 10px 14px;
-    align-items: center;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    overflow-x: auto;
-    flex-shrink: 0;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
+@media (max-width: 768px) {
+  .app { flex-direction: column; }
+  .sidebar { width: 100%; flex-direction: row; padding: 10px 14px; align-items: center; border-right: none; border-bottom: 1px solid var(--border); overflow-x: auto; }
   .logo { margin-bottom: 0; margin-right: 12px; flex-shrink: 0; }
-  .nav { flex-direction: row; gap: 4px; flex: 1; }
-  .nav-item { white-space: nowrap; font-size: 12px; padding: 7px 10px; }
+  .nav { flex-direction: row; gap: 4px; }
+  .nav-item { white-space: nowrap; }
   .sidebar-bottom { display: none; }
-  .main { padding: 16px; flex: 1; overflow-y: auto; }
+  .main { padding: 16px; }
   .metrics { grid-template-columns: repeat(2, 1fr); }
   h1 { font-size: 20px; }
   .users-grid { grid-template-columns: 1fr; }
-  #mapFrame { height: 240px; }
-                   }
+}
