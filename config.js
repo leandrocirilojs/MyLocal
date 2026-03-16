@@ -3,7 +3,7 @@
    Configurações → SDK → Config no Firebase Console
    ===================================================== */
 
-const firebaseConfig = {
+const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCl4f1jEq-kM-XIGtGl_VOnGsGezFN85jY",
   authDomain: "mylocal-578a0.firebaseapp.com",
   databaseURL: "https://mylocal-578a0-default-rtdb.firebaseio.com",
